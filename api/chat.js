@@ -140,7 +140,7 @@ export default async function handler(req) {
         'X-Title': 'AI Literacy Framework Chat',
       },
       body: JSON.stringify({
-        model: 'anthropic/claude-3-haiku',
+        model: process.env.OPENROUTER_MODEL || 'google/gemini-2.0-flash-001',
         messages: [
           { role: 'system', content: SYSTEM_PROMPT },
           ...messages,
