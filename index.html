@@ -894,6 +894,7 @@
       <svg class="icon-chat" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">
         <path d="M21 15a2 2 0 0 1-2 2H7l-4 4V5a2 2 0 0 1 2-2h14a2 2 0 0 1 2 2z"/>
       </svg>
+      <span class="chat-toggle-label">שאל על המסגרת</span>
       <svg class="icon-close" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">
         <line x1="18" y1="6" x2="6" y2="18"/><line x1="6" y1="6" x2="18" y2="18"/>
       </svg>
@@ -905,7 +906,7 @@
           <div class="chat-avatar">🤖</div>
           <div>
             <div class="chat-title">עוזר מסגרת AILit</div>
-            <div class="chat-subtitle">שאל כל שאלה על המסגרת</div>
+            <div class="chat-subtitle">מבוסס על המסמך המלא · מציין עמודים</div>
           </div>
         </div>
         <button id="chat-close" aria-label="סגור צ'אט">✕</button>
@@ -913,7 +914,18 @@
 
       <div id="chat-messages" role="log" aria-live="polite" aria-label="היסטוריית שיחה">
         <div class="msg msg-assistant">
-          <div class="msg-bubble">שלום! 👋 אני כאן לעזור לך להבין את מסגרת האוריינות ב-AI של OECD והנציבות האירופית.<br><br>תוכל לשאול אותי על הכישורים, התחומים, הממדים, ההקשר החינוכי — הכל על סמך תוכן המסגרת.</div>
+          <div class="msg-bubble">שלום! 👋 אני כאן לעזור לך להבין לעומק את מסגרת AILit.<br><br>אני מבוסס על המסמך המלא ואציין עמוד מקור לכל תשובה.</div>
+        </div>
+        <div id="chat-suggestions">
+          <div class="suggestions-label">שאלות להתחלה:</div>
+          <div class="suggestions-grid">
+            <button class="suggestion-chip">מהם 4 תחומי המסגרת?</button>
+            <button class="suggestion-chip">מה ההגדרה של אוריינות AI?</button>
+            <button class="suggestion-chip">מה ההבדל בין ידע, מיומנות ועמדה?</button>
+            <button class="suggestion-chip">מה הקשר בין המסגרת ל-PISA 2029?</button>
+            <button class="suggestion-chip">מה המסגרת אומרת על הוגנות?</button>
+            <button class="suggestion-chip">מהם 22 כישורי המסגרת?</button>
+          </div>
         </div>
       </div>
 
