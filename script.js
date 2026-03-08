@@ -576,6 +576,154 @@
 })();
 
 
+// ===== CHAT WIDGET =====
+(function initChat() {
+  const toggle   = document.getElementById('chat-toggle');
+  const panel    = document.getElementById('chat-panel');
+  const closeBtn = document.getElementById('chat-close');
+  const input    = document.getElementById('chat-input');
+  const sendBtn  = document.getElementById('chat-send');
+  const msgsEl   = document.getElementById('chat-messages');
+
+  if (!toggle) return;
+
+  let history   = [];
+  let isLoading = false;
+  let isOpen    = false;
+
+  function openChat() {
+    isOpen = true;
+    panel.classList.add('open');
+    toggle.classList.add('open');
+    panel.setAttribute('aria-hidden', 'false');
+    input.focus();
+  }
+
+  function closeChat() {
+    isOpen = false;
+    panel.classList.remove('open');
+    toggle.classList.remove('open');
+    panel.setAttribute('aria-hidden', 'true');
+  }
+
+  toggle.addEventListener('click', () => isOpen ? closeChat() : openChat());
+  closeBtn.addEventListener('click', closeChat);
+
+  // Close on Escape
+  document.addEventListener('keydown', e => {
+    if (e.key === 'Escape' && isOpen) closeChat();
+  });
+
+  sendBtn.addEventListener('click', sendMessage);
+  input.addEventListener('keydown', e => {
+    if (e.key === 'Enter' && !e.shiftKey) {
+      e.preventDefault();
+      sendMessage();
+    }
+  });
+
+  // Auto-resize textarea
+  input.addEventListener('input', () => {
+    input.style.height = 'auto';
+    input.style.height = Math.min(input.scrollHeight, 100) + 'px';
+  });
+
+  function appendMessage(role, text) {
+    const msgEl = document.createElement('div');
+    msgEl.className = `msg msg-${role}`;
+    const bubble = document.createElement('div');
+    bubble.className = 'msg-bubble';
+    bubble.textContent = text;
+    msgEl.appendChild(bubble);
+    msgsEl.appendChild(msgEl);
+    msgsEl.scrollTop = msgsEl.scrollHeight;
+    return bubble;
+  }
+
+  function showTyping() {
+    const msgEl = document.createElement('div');
+    msgEl.className = 'msg msg-assistant typing-indicator';
+    msgEl.innerHTML =
+      '<div class="msg-bubble">' +
+      '<span class="typing-dot"></span>' +
+      '<span class="typing-dot"></span>' +
+      '<span class="typing-dot"></span>' +
+      '</div>';
+    msgsEl.appendChild(msgEl);
+    msgsEl.scrollTop = msgsEl.scrollHeight;
+    return msgEl;
+  }
+
+  async function sendMessage() {
+    const text = input.value.trim();
+    if (!text || isLoading) return;
+
+    appendMessage('user', text);
+    history.push({ role: 'user', content: text });
+    input.value = '';
+    input.style.height = 'auto';
+
+    const typingEl = showTyping();
+    isLoading = true;
+    sendBtn.disabled = true;
+
+    try {
+      const res = await fetch('/api/chat', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ messages: history }),
+      });
+
+      typingEl.remove();
+
+      if (!res.ok) {
+        appendMessage('assistant', 'מצטער, אירעה שגיאה בשרת. אנא נסה שוב.');
+        return;
+      }
+
+      const bubble = appendMessage('assistant', '');
+      const reader  = res.body.getReader();
+      const decoder = new TextDecoder();
+      let fullText = '';
+      let buffer   = '';
+
+      while (true) {
+        const { done, value } = await reader.read();
+        if (done) break;
+
+        buffer += decoder.decode(value, { stream: true });
+        const lines = buffer.split('\n');
+        buffer = lines.pop(); // keep incomplete last line
+
+        for (const line of lines) {
+          if (!line.startsWith('data: ')) continue;
+          const data = line.slice(6).trim();
+          if (data === '[DONE]') break;
+          try {
+            const parsed = JSON.parse(data);
+            const delta  = parsed.choices?.[0]?.delta?.content;
+            if (delta) {
+              fullText += delta;
+              bubble.textContent = fullText;
+              msgsEl.scrollTop = msgsEl.scrollHeight;
+            }
+          } catch { /* skip malformed chunks */ }
+        }
+      }
+
+      if (fullText) history.push({ role: 'assistant', content: fullText });
+
+    } catch {
+      typingEl?.remove();
+      appendMessage('assistant', 'מצטער, לא ניתן להתחבר לשרת. בדוק את החיבור לאינטרנט.');
+    } finally {
+      isLoading = false;
+      sendBtn.disabled = false;
+      input.focus();
+    }
+  }
+})();
+
 // ===== DOMAIN TAB KEYBOARD NAV =====
 (function initTabKeyboard() {
   const tabs = document.querySelectorAll('.domain-tab');

@@ -888,6 +888,53 @@
     </div>
   </footer>
 
+  <!-- ===== CHAT WIDGET ===== -->
+  <div id="chat-widget">
+    <button id="chat-toggle" aria-label="פתח צ'אט על מסגרת AILit" title="שאל אותי על המסגרת">
+      <svg class="icon-chat" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">
+        <path d="M21 15a2 2 0 0 1-2 2H7l-4 4V5a2 2 0 0 1 2-2h14a2 2 0 0 1 2 2z"/>
+      </svg>
+      <svg class="icon-close" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">
+        <line x1="18" y1="6" x2="6" y2="18"/><line x1="6" y1="6" x2="18" y2="18"/>
+      </svg>
+    </button>
+
+    <div id="chat-panel" aria-hidden="true" role="dialog" aria-label="צ'אט מסגרת AILit">
+      <div id="chat-header">
+        <div class="chat-header-info">
+          <div class="chat-avatar">🤖</div>
+          <div>
+            <div class="chat-title">עוזר מסגרת AILit</div>
+            <div class="chat-subtitle">שאל כל שאלה על המסגרת</div>
+          </div>
+        </div>
+        <button id="chat-close" aria-label="סגור צ'אט">✕</button>
+      </div>
+
+      <div id="chat-messages" role="log" aria-live="polite" aria-label="היסטוריית שיחה">
+        <div class="msg msg-assistant">
+          <div class="msg-bubble">שלום! 👋 אני כאן לעזור לך להבין את מסגרת האוריינות ב-AI של OECD והנציבות האירופית.<br><br>תוכל לשאול אותי על הכישורים, התחומים, הממדים, ההקשר החינוכי — הכל על סמך תוכן המסגרת.</div>
+        </div>
+      </div>
+
+      <div id="chat-input-area">
+        <textarea
+          id="chat-input"
+          placeholder="שאל שאלה על מסגרת AILit..."
+          rows="1"
+          maxlength="500"
+          aria-label="הקלד שאלה"
+        ></textarea>
+        <button id="chat-send" aria-label="שלח שאלה">
+          <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round">
+            <line x1="12" y1="19" x2="12" y2="5"/>
+            <polyline points="5 12 12 5 19 12"/>
+          </svg>
+        </button>
+      </div>
+    </div>
+  </div>
+
   <script src="script.js"></script>
 </body>
 </html>
