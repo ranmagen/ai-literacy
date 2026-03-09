@@ -42,7 +42,6 @@
   function draw() {
     ctx.clearRect(0, 0, W, H);
 
-    // Draw connections
     for (let i = 0; i < particles.length; i++) {
       for (let j = i + 1; j < particles.length; j++) {
         const dx = particles[i].x - particles[j].x;
@@ -60,18 +59,14 @@
       }
     }
 
-    // Draw particles
     particles.forEach(p => {
       ctx.beginPath();
       ctx.arc(p.x, p.y, p.r, 0, Math.PI * 2);
       ctx.fillStyle = `rgba(0, 188, 212, ${p.alpha})`;
       ctx.fill();
 
-      // Update position
       p.x += p.vx;
       p.y += p.vy;
-
-      // Bounce off edges
       if (p.x < 0 || p.x > W) p.vx *= -1;
       if (p.y < 0 || p.y > H) p.vy *= -1;
     });
@@ -88,7 +83,6 @@
     draw();
   });
 
-  // Pause when tab hidden
   document.addEventListener('visibilitychange', () => {
     if (document.hidden) {
       cancelAnimationFrame(animId);
@@ -110,48 +104,10 @@
         }
       });
     },
-    { threshold: 0.1, rootMargin: '0px 0px -40px 0px' }
+    { threshold: 0.08, rootMargin: '0px 0px -40px 0px' }
   );
 
   document.querySelectorAll('.reveal').forEach(el => observer.observe(el));
-})();
-
-
-// ===== COUNTER ANIMATION =====
-(function initCounters() {
-  const counters = document.querySelectorAll('.stat-number[data-target]');
-  if (!counters.length) return;
-
-  function animateCounter(el) {
-    const target = parseInt(el.dataset.target, 10);
-    const duration = 1500;
-    const start = performance.now();
-
-    function update(now) {
-      const elapsed = now - start;
-      const progress = Math.min(elapsed / duration, 1);
-      // Ease out cubic
-      const eased = 1 - Math.pow(1 - progress, 3);
-      el.textContent = Math.round(eased * target);
-      if (progress < 1) requestAnimationFrame(update);
-    }
-
-    requestAnimationFrame(update);
-  }
-
-  const observer = new IntersectionObserver(
-    (entries) => {
-      entries.forEach(entry => {
-        if (entry.isIntersecting) {
-          animateCounter(entry.target);
-          observer.unobserve(entry.target);
-        }
-      });
-    },
-    { threshold: 0.5 }
-  );
-
-  counters.forEach(c => observer.observe(c));
 })();
 
 
@@ -165,13 +121,11 @@
       links.classList.toggle('open');
     });
 
-    // Close on link click
     links.querySelectorAll('a').forEach(a => {
       a.addEventListener('click', () => links.classList.remove('open'));
     });
   }
 
-  // Highlight active section
   const sections = document.querySelectorAll('section[id], footer[id]');
   const navLinks = document.querySelectorAll('.nav-links a');
 
@@ -185,7 +139,7 @@
         }
       });
     },
-    { threshold: 0.4 }
+    { threshold: 0.35 }
   );
 
   sections.forEach(s => sectionObserver.observe(s));
@@ -195,8 +149,22 @@
 // ===== FLIP CARDS =====
 (function initFlipCards() {
   document.querySelectorAll('.flip-card').forEach(card => {
+    // Only flip on desktop (where we have the 3D flip)
+    const isMobile = window.innerWidth <= 900;
+    if (isMobile) return;
+
     card.addEventListener('click', () => {
       card.classList.toggle('flipped');
+    });
+
+    card.setAttribute('tabindex', '0');
+    card.setAttribute('role', 'button');
+    card.setAttribute('aria-label', 'לחץ להצגת פרטים');
+    card.addEventListener('keydown', e => {
+      if (e.key === 'Enter' || e.key === ' ') {
+        e.preventDefault();
+        card.click();
+      }
     });
   });
 })();
@@ -211,288 +179,71 @@
     tab.addEventListener('click', () => {
       const domain = tab.dataset.domain;
 
-      // Update tabs
       tabs.forEach(t => t.classList.remove('active'));
       tab.classList.add('active');
 
-      // Update panels
       panels.forEach(p => p.classList.remove('active'));
       const target = document.getElementById(`panel-${domain}`);
       if (target) target.classList.add('active');
     });
   });
+
+  // Keyboard nav
+  tabs.forEach((tab, i) => {
+    tab.addEventListener('keydown', e => {
+      if (e.key === 'ArrowLeft') {
+        e.preventDefault();
+        const next = tabs[(i + 1) % tabs.length];
+        next.focus();
+        next.click();
+      } else if (e.key === 'ArrowRight') {
+        e.preventDefault();
+        const prev = tabs[(i - 1 + tabs.length) % tabs.length];
+        prev.focus();
+        prev.click();
+      }
+    });
+  });
 })();
 
 
-// ===== ACCORDION =====
-(function initAccordion() {
-  document.querySelectorAll('.accordion-header').forEach(header => {
-    header.addEventListener('click', () => {
-      const item = header.closest('.accordion-item');
-      const body = item.querySelector('.accordion-body');
-      const isOpen = item.classList.contains('open');
+// ===== PISA COMPETENCY NODES =====
+(function initPisaCompNodes() {
+  const nodes = document.querySelectorAll('.pisa-comp-node');
+  const details = document.querySelectorAll('.pisa-comp-detail');
 
-      // Close all siblings in same accordion group
-      const siblings = item.closest('.competencies-accordion').querySelectorAll('.accordion-item');
-      siblings.forEach(sib => {
-        if (sib !== item) {
-          sib.classList.remove('open');
-          sib.querySelector('.accordion-body').classList.remove('open');
+  if (!nodes.length) return;
+
+  // Init first as active
+  nodes[0].classList.add('active');
+
+  nodes.forEach(node => {
+    node.addEventListener('click', () => {
+      const comp = node.dataset.comp;
+
+      nodes.forEach(n => n.classList.remove('active'));
+      node.classList.add('active');
+
+      details.forEach(d => d.classList.remove('active'));
+      const target = document.getElementById(`detail-${comp}`);
+      if (target) {
+        target.classList.add('active');
+        // Smooth scroll on mobile
+        if (window.innerWidth <= 900) {
+          target.scrollIntoView({ behavior: 'smooth', block: 'nearest' });
         }
-      });
-
-      // Toggle current
-      item.classList.toggle('open', !isOpen);
-      body.classList.toggle('open', !isOpen);
-    });
-  });
-})();
-
-
-// ===== COMPETENCY GRID FILTER =====
-(function initFilter() {
-  const filterBtns = document.querySelectorAll('.filter-btn');
-  const cards = document.querySelectorAll('.comp-card');
-
-  filterBtns.forEach(btn => {
-    btn.addEventListener('click', () => {
-      const filter = btn.dataset.filter;
-
-      // Update buttons
-      filterBtns.forEach(b => b.classList.remove('active'));
-      btn.classList.add('active');
-
-      // Filter cards
-      cards.forEach(card => {
-        if (filter === 'all' || card.dataset.domain === filter) {
-          card.classList.remove('hidden');
-          card.style.animation = 'none';
-          // Trigger reflow
-          void card.offsetWidth;
-          card.style.animation = 'fade-card-in 0.3s ease forwards';
-        } else {
-          card.classList.add('hidden');
-        }
-      });
-    });
-  });
-
-  // Inject keyframe if not present
-  const style = document.createElement('style');
-  style.textContent = `
-    @keyframes fade-card-in {
-      from { opacity: 0; transform: scale(0.95) translateY(8px); }
-      to { opacity: 1; transform: scale(1) translateY(0); }
-    }
-  `;
-  document.head.appendChild(style);
-})();
-
-
-// ===== QUIZ =====
-(function initQuiz() {
-  const questions = [
-    {
-      q: 'מה כולל המושג "אוריינות AI" לפי מסגרת AILit?',
-      opts: [
-        'רק ידע טכני על תכנות ואלגוריתמים',
-        'ידע, מיומנויות ועמדות הנוגעים לבינה מלאכותית',
-        'רק שימוש בכלי AI כמו ChatGPT',
-        'הבנה מתמטית מעמיקה של מודלים'
-      ],
-      correct: 1
-    },
-    {
-      q: 'כמה תחומי ליבה כוללת מסגרת AILit?',
-      opts: ['2 תחומים', '3 תחומים', '4 תחומים', '6 תחומים'],
-      correct: 2
-    },
-    {
-      q: 'מה עיקר תחום "יצירה עם AI"?',
-      opts: [
-        'עיצוב אלגוריתמים ממחשב',
-        'ניהול מערכות AI בארגונים',
-        'שיתוף פעולה עם AI לרעיונות ופתרון בעיות',
-        'הכשרת מודלי למידת מכונה'
-      ],
-      correct: 2
-    },
-    {
-      q: 'מהי "הזיה" (Hallucination) בהקשר של מודלי AI?',
-      opts: [
-        'תופעה ויזואלית בממשק המשתמש',
-        'עדכון אוטומטי של המודל',
-        'כאשר AI מייצר מידע שגוי בביטחון מלא',
-        'שגיאה בתשתית החישובית'
-      ],
-      correct: 2
-    },
-    {
-      q: 'למה חשוב לשמור על "פיקוח אנושי" על מערכות AI?',
-      opts: [
-        'כדי להאט את קצב הפיתוח הטכנולוגי',
-        'כדי לוודא שהחלטות AI עולות בקנה אחד עם ערכים ואחריות אנושית',
-        'כדי להחליף AI בעובדים אנושיים',
-        'כדי להקטין עלויות תפעוליות'
-      ],
-      correct: 1
-    },
-    {
-      q: 'מהו "Prompt" בהקשר של מודלי שפה גדולים (LLMs)?',
-      opts: [
-        'סוג מיוחד של מחשב',
-        'שגיאה בקוד התוכנה',
-        'הנחיה, שאלה או קלט הניתן למערכת AI לקבלת תגובה',
-        'כלי לאימון מחדש של מודל'
-      ],
-      correct: 2
-    },
-    {
-      q: 'כיצד הטיות בנתוני אימון משפיעות על מערכות AI?',
-      opts: [
-        'הן משפרות את ביצועי המודל',
-        'הן עלולות לגרום לתוצאות לא הוגנות כלפי קבוצות מסוימות',
-        'הן אינן משפיעות על הפלטים',
-        'הן רלוונטיות רק במערכות ישנות'
-      ],
-      correct: 1
-    },
-    {
-      q: 'מה ההבדל העיקרי בין תחום "ניהול AI" לתחום "עיצוב AI"?',
-      opts: [
-        'אין הבדל מהותי בין השניים',
-        'עיצוב מיועד רק לאנשי טכנולוגיה',
-        'ניהול עוסק בהאצלת משימות ופיקוח; עיצוב עוסק בהבנת עקרונות ובנייה',
-        'ניהול כולל כתיבת קוד בלבד'
-      ],
-      correct: 2
-    }
-  ];
-
-  const letters = ['א', 'ב', 'ג', 'ד'];
-  let current = 0;
-  let score = 0;
-  let answered = false;
-
-  const container = document.getElementById('quizContainer');
-  const content = document.getElementById('quizContent');
-  const nextBtn = document.getElementById('quizNextBtn');
-  const resultDiv = document.getElementById('quizResult');
-  const progressFill = document.getElementById('quizProgress');
-  const questionNum = document.getElementById('questionNum');
-
-  if (!container) return;
-
-  function showQuestion(index) {
-    answered = false;
-    nextBtn.style.display = 'none';
-    resultDiv.style.display = 'none';
-    content.style.display = 'block';
-
-    const q = questions[index];
-    const progress = (index / questions.length) * 100;
-    progressFill.style.width = `${progress}%`;
-    questionNum.textContent = index + 1;
-
-    content.innerHTML = `
-      <div class="quiz-question">
-        <h3>${q.q}</h3>
-        <div class="quiz-options">
-          ${q.opts.map((opt, i) => `
-            <button class="quiz-option" data-index="${i}">
-              <span class="quiz-option-letter">${letters[i]}</span>
-              ${opt}
-            </button>
-          `).join('')}
-        </div>
-      </div>
-    `;
-
-    // Attach handlers
-    content.querySelectorAll('.quiz-option').forEach(btn => {
-      btn.addEventListener('click', () => selectAnswer(btn, q.correct));
-    });
-  }
-
-  function selectAnswer(btn, correct) {
-    if (answered) return;
-    answered = true;
-
-    const selected = parseInt(btn.dataset.index, 10);
-    const allOptions = content.querySelectorAll('.quiz-option');
-
-    allOptions.forEach(opt => {
-      opt.disabled = true;
-      const idx = parseInt(opt.dataset.index, 10);
-      if (idx === correct) opt.classList.add('correct');
-      else if (opt === btn && selected !== correct) opt.classList.add('wrong');
+      }
     });
 
-    if (selected === correct) score++;
-
-    nextBtn.style.display = 'inline-flex';
-    nextBtn.textContent = current < questions.length - 1 ? 'הבא ←' : 'סיום ✓';
-  }
-
-  function showResult() {
-    content.style.display = 'none';
-    nextBtn.style.display = 'none';
-    progressFill.style.width = '100%';
-    questionNum.textContent = questions.length;
-
-    const pct = Math.round((score / questions.length) * 100);
-    let icon, title, desc, levelText, levelBg;
-
-    if (score <= 3) {
-      icon = '🌱';
-      title = 'מתחיל — יש לאן לצמוח!';
-      desc = 'אוריינות AI היא מיומנות חדשה — וזה בסדר גמור להתחיל מהבסיס. המסגרת כאן בדיוק בשבילך! חקור את ה-4 תחומים ו-22 הכישורים כדי להתחיל את המסע.';
-      levelText = '🌱 מתחיל';
-      levelBg = 'background: rgba(46,125,50,0.2); color: #4caf50; border: 1px solid #4caf50;';
-    } else if (score <= 6) {
-      icon = '🚀';
-      title = 'מתקדם — ידע טוב!';
-      desc = 'יש לך בסיס טוב! אתה מבין את עקרונות האוריינות ב-AI ויכול להרחיב את הידע בתחומים ספציפיים — בעיקר בניהול ועיצוב מערכות AI.';
-      levelText = '🚀 מתקדם';
-      levelBg = 'background: rgba(2,136,209,0.2); color: #29b6f6; border: 1px solid #29b6f6;';
-    } else {
-      icon = '🌟';
-      title = 'מומחה — כל הכבוד!';
-      desc = 'ידע מרשים! אתה מבין לעומק את מסגרת אוריינות ה-AI. המשך לחקור, ושתף את הידע עם אחרים — האוריינות מתחזקת כשמלמדים אותה!';
-      levelText = '🌟 מומחה';
-      levelBg = 'background: rgba(230,81,0,0.2); color: #ff9800; border: 1px solid #ff9800;';
-    }
-
-    document.getElementById('resultIcon').textContent = icon;
-    document.getElementById('resultTitle').textContent = title;
-    document.getElementById('resultScore').textContent = `${score} / ${questions.length}`;
-    document.getElementById('resultDesc').textContent = desc;
-
-    const levelEl = document.getElementById('resultLevel');
-    levelEl.textContent = levelText;
-    levelEl.style.cssText = levelBg + ' padding: 10px 32px; border-radius: 100px; font-size: 1.1rem; font-weight: 700; margin-bottom: 24px; display: inline-block;';
-
-    resultDiv.style.display = 'block';
-  }
-
-  nextBtn.addEventListener('click', () => {
-    current++;
-    if (current < questions.length) {
-      showQuestion(current);
-    } else {
-      showResult();
-    }
+    node.setAttribute('tabindex', '0');
+    node.setAttribute('role', 'button');
+    node.addEventListener('keydown', e => {
+      if (e.key === 'Enter' || e.key === ' ') {
+        e.preventDefault();
+        node.click();
+      }
+    });
   });
-
-  document.getElementById('quizRetryBtn').addEventListener('click', () => {
-    current = 0;
-    score = 0;
-    answered = false;
-    showQuestion(0);
-  });
-
-  // Init
-  showQuestion(0);
 })();
 
 
@@ -504,6 +255,8 @@
   let isDown = false;
   let startX;
   let scrollLeft;
+
+  slider.style.cursor = 'grab';
 
   slider.addEventListener('mousedown', e => {
     isDown = true;
@@ -532,14 +285,14 @@
 })();
 
 
-// ===== SMOOTH SCROLL FOR NAV LINKS =====
+// ===== SMOOTH SCROLL =====
 (function initSmoothScroll() {
   document.querySelectorAll('a[href^="#"]').forEach(link => {
     link.addEventListener('click', e => {
       const target = document.querySelector(link.getAttribute('href'));
       if (!target) return;
       e.preventDefault();
-      const offset = 72; // navbar height
+      const offset = 72;
       const top = target.getBoundingClientRect().top + window.scrollY - offset;
       window.scrollTo({ top, behavior: 'smooth' });
     });
@@ -547,32 +300,314 @@
 })();
 
 
-// ===== KEYBOARD ACCESSIBILITY =====
-(function initKeyboard() {
-  // Allow Enter/Space on accordion headers
-  document.querySelectorAll('.accordion-header').forEach(header => {
-    header.setAttribute('role', 'button');
-    header.setAttribute('tabindex', '0');
-    header.addEventListener('keydown', e => {
-      if (e.key === 'Enter' || e.key === ' ') {
-        e.preventDefault();
-        header.click();
-      }
+// ===== QUIZ =====
+(function initQuiz() {
+  const ALL_QUESTIONS = [
+    // AILit questions
+    {
+      source: 'ailit',
+      q: 'מה כולל המושג "אוריינות AI" לפי מסגרת AILit?',
+      opts: [
+        'רק ידע טכני על תכנות ואלגוריתמים',
+        'ידע, מיומנויות ועמדות הנוגעים לבינה מלאכותית',
+        'רק שימוש בכלי AI כמו ChatGPT',
+        'הבנה מתמטית מעמיקה של מודלים'
+      ],
+      correct: 1,
+      explanation: 'מסגרת AILit מגדירה אוריינות AI כשילוב של ידע, מיומנויות ועמדות – לא רק מיומנות טכנית.'
+    },
+    {
+      source: 'ailit',
+      q: 'כמה תחומי ליבה כוללת מסגרת AILit?',
+      opts: ['2 תחומים', '3 תחומים', '4 תחומים', '6 תחומים'],
+      correct: 2,
+      explanation: 'מסגרת AILit כוללת 4 תחומים: מעורבות עם AI, יצירה עם AI, ניהול AI ועיצוב AI.'
+    },
+    {
+      source: 'ailit',
+      q: 'מה עיקר תחום "יצירה עם AI"?',
+      opts: [
+        'עיצוב אלגוריתמים ממחשב',
+        'ניהול מערכות AI בארגונים',
+        'שיתוף פעולה עם AI לרעיונות ופתרון בעיות',
+        'הכשרת מודלי למידת מכונה'
+      ],
+      correct: 2,
+      explanation: 'תחום היצירה עוסק בשיתוף פעולה עם AI לרעיונות, תוכן ופתרון בעיות, תוך שמירה על מקוריות.'
+    },
+    {
+      source: 'ailit',
+      q: 'מהי "הזיה" (Hallucination) בהקשר של מודלי AI?',
+      opts: [
+        'תופעה ויזואלית בממשק המשתמש',
+        'עדכון אוטומטי של המודל',
+        'כאשר AI מייצר מידע שגוי בביטחון מלא',
+        'שגיאה בתשתית החישובית'
+      ],
+      correct: 2,
+      explanation: 'הזיה (Hallucination) היא כאשר מודל AI מציג מידע שגוי או בדוי כאילו הוא עובדה. זה כלול בתחום ניהול AI.'
+    },
+    {
+      source: 'ailit',
+      q: 'כיצד הטיות בנתוני אימון משפיעות על מערכות AI?',
+      opts: [
+        'הן משפרות את ביצועי המודל',
+        'הן עלולות לגרום לתוצאות לא הוגנות כלפי קבוצות מסוימות',
+        'הן אינן משפיעות על הפלטים',
+        'הן רלוונטיות רק במערכות ישנות'
+      ],
+      correct: 1,
+      explanation: 'הטיות בנתוני אימון עלולות להוביל לתוצאות מפלות ולא הוגנות. זה כלול בתחום עיצוב AI.'
+    },
+    // PISA 2029 MAIL questions
+    {
+      source: 'pisa',
+      q: 'מהם 3 מושגי המפתח של מסגרת PISA 2029 MAIL?',
+      opts: [
+        'נתונים, אלגוריתמים ומודלים',
+        'יוצרים וקהלים, מסרים ומשמעויות, ייצוגים ומציאות',
+        'למידה, בידור ואזרחות',
+        'פרטיות, אבטחה ואמינות'
+      ],
+      correct: 1,
+      explanation: 'PISA 2029 MAIL מבוסס על 3 מושגי מפתח: Authors & Audiences, Messages & Meanings, Representations & Realities.'
+    },
+    {
+      source: 'pisa',
+      q: 'מהו כישור העוגן ב-PISA 2029 MAIL?',
+      opts: [
+        'גישה ושימוש',
+        'ניתוח והערכה',
+        'השתקפות ופעולה אתית ואחראית',
+        'יצירה'
+      ],
+      correct: 2,
+      explanation: '"השתקפות ופעולה אתית ואחראית" הוא כישור העוגן המשתרע על כל 5 הכישורים האחרים.'
+    },
+    {
+      source: 'pisa',
+      q: 'כמה אחוז מזמן ההערכה ב-PISA MAIL מוקדש לכישורי "ניתוח" ו-"יצירה"?',
+      opts: ['25%', '50%', '75%', '100%'],
+      correct: 1,
+      explanation: 'קבוצת המומחים ממליצה להקדיש 25% לניתוח ו-25% ליצירה – סך הכל 50% מזמן ההערכה.'
+    },
+    {
+      source: 'pisa',
+      q: 'כיצד AI משנה את הממד "יוצרים וקהלים" של מסגרת PISA MAIL?',
+      opts: [
+        'AI אינו משפיע על מימד זה',
+        'AI יוצר מסרים בשיתוף פעולה בין אדם-מכונה, כאשר נתונים ועיצוב מעצבים מטרה וקהל',
+        'AI מחליף לחלוטין את היוצר האנושי',
+        'AI משפיע רק על הממד הכלכלי של יצירת מסרים'
+      ],
+      correct: 1,
+      explanation: 'לפי PISA MAIL, AI שינה את מממד היוצרים: מסרים AI-גנרטיביים נוצרים בשיתוף בין אדם למכונה, כאשר נתוני אימון ובחירות עיצוב מעצבים את התוצר.'
+    },
+    {
+      source: 'pisa',
+      q: 'מהם 5 הקשרי ההערכה ב-PISA 2029 MAIL?',
+      opts: [
+        'בית ספר, עבודה, מדע, פוליטיקה ותרבות',
+        'יחסים, למידה, בידור, שכנוע ואזרחות',
+        'מדיה, AI, מחשוב, תקשורת ועיתונאות',
+        'ידע, מיומנות, עמדה, אתיקה ויצירה'
+      ],
+      correct: 1,
+      explanation: 'PISA MAIL מעגן הערכות ב-5 הקשרים: Relationships, Learning, Entertainment, Persuasion, Citizenship.'
+    },
+  ];
+
+  const letters = ['א', 'ב', 'ג', 'ד'];
+  let questions = [...ALL_QUESTIONS];
+  let current = 0;
+  let score = 0;
+  let scoreAILit = 0;
+  let scorePISA = 0;
+  let answered = false;
+  let activeFilter = 'all';
+
+  const container = document.getElementById('quizContainer');
+  const content = document.getElementById('quizContent');
+  const nextBtn = document.getElementById('quizNextBtn');
+  const resultDiv = document.getElementById('quizResult');
+  const progressFill = document.getElementById('quizProgress');
+  const questionNum = document.getElementById('questionNum');
+  const totalQuestionsEl = document.getElementById('totalQuestions');
+
+  if (!container) return;
+
+  // Filter buttons
+  const allBtn = document.getElementById('quizDocAll');
+  const ailBtn = document.getElementById('quizDocAILit');
+  const pisaBtn = document.getElementById('quizDocPISA');
+
+  function setFilter(filter) {
+    activeFilter = filter;
+    if (filter === 'all') questions = [...ALL_QUESTIONS];
+    else questions = ALL_QUESTIONS.filter(q => q.source === filter);
+
+    allBtn.classList.toggle('active', filter === 'all');
+    ailBtn.classList.toggle('active', filter === 'ailit');
+    pisaBtn.classList.toggle('active', filter === 'pisa');
+
+    resetQuiz();
+  }
+
+  if (allBtn) allBtn.addEventListener('click', () => setFilter('all'));
+  if (ailBtn) ailBtn.addEventListener('click', () => setFilter('ailit'));
+  if (pisaBtn) pisaBtn.addEventListener('click', () => setFilter('pisa'));
+
+  function resetQuiz() {
+    current = 0;
+    score = 0;
+    scoreAILit = 0;
+    scorePISA = 0;
+    answered = false;
+    resultDiv.style.display = 'none';
+    showQuestion(0);
+  }
+
+  function showQuestion(index) {
+    answered = false;
+    nextBtn.style.display = 'none';
+    resultDiv.style.display = 'none';
+    content.style.display = 'block';
+
+    const q = questions[index];
+    const progress = (index / questions.length) * 100;
+    progressFill.style.width = `${progress}%`;
+    questionNum.textContent = index + 1;
+    totalQuestionsEl.textContent = questions.length;
+
+    const sourceLabel = q.source === 'ailit'
+      ? '<span class="quiz-source-tag ailit-q">📚 AILit</span>'
+      : '<span class="quiz-source-tag pisa-q">📊 PISA 2029 MAIL</span>';
+
+    content.innerHTML = `
+      <div class="quiz-question">
+        ${sourceLabel}
+        <h3>${q.q}</h3>
+        <div class="quiz-options">
+          ${q.opts.map((opt, i) => `
+            <button class="quiz-option" data-index="${i}">
+              <span class="quiz-option-letter">${letters[i]}</span>
+              ${opt}
+            </button>
+          `).join('')}
+        </div>
+      </div>
+    `;
+
+    content.querySelectorAll('.quiz-option').forEach(btn => {
+      btn.addEventListener('click', () => selectAnswer(btn, q.correct, q.explanation));
     });
+  }
+
+  function selectAnswer(btn, correct, explanation) {
+    if (answered) return;
+    answered = true;
+
+    const selected = parseInt(btn.dataset.index, 10);
+    const allOptions = content.querySelectorAll('.quiz-option');
+    const q = questions[current];
+
+    allOptions.forEach(opt => {
+      opt.disabled = true;
+      const idx = parseInt(opt.dataset.index, 10);
+      if (idx === correct) opt.classList.add('correct');
+      else if (opt === btn && selected !== correct) opt.classList.add('wrong');
+    });
+
+    if (selected === correct) {
+      score++;
+      if (q.source === 'ailit') scoreAILit++;
+      else scorePISA++;
+    }
+
+    // Show explanation
+    if (explanation) {
+      const expEl = document.createElement('div');
+      expEl.style.cssText = 'margin-top:12px;padding:12px 16px;background:rgba(255,255,255,0.06);border-radius:8px;font-size:0.82rem;color:rgba(255,255,255,0.7);line-height:1.6;border:1px solid rgba(255,255,255,0.08);';
+      expEl.innerHTML = `💡 ${explanation}`;
+      content.querySelector('.quiz-question').appendChild(expEl);
+    }
+
+    nextBtn.style.display = 'inline-flex';
+    nextBtn.textContent = current < questions.length - 1 ? 'הבא ←' : 'סיום ✓';
+  }
+
+  function showResult() {
+    content.style.display = 'none';
+    nextBtn.style.display = 'none';
+    progressFill.style.width = '100%';
+    questionNum.textContent = questions.length;
+
+    const pct = Math.round((score / questions.length) * 100);
+    let icon, title, desc, levelText, levelColor;
+
+    if (pct < 50) {
+      icon = '🌱';
+      title = 'מתחיל — יש לאן לצמוח!';
+      desc = 'אוריינות AI ומדיה הן מיומנויות חדשות — מגיע לך לחקור את שני המסמכים לעומק. חזור ועיין בסעיפים הרלוונטיים.';
+      levelText = '🌱 מתחיל';
+      levelColor = '#4caf50';
+    } else if (pct < 80) {
+      icon = '🚀';
+      title = 'מתקדם — ידע טוב!';
+      desc = 'יש לך הבנה טובה של שני המסמכים. כדאי לחזק את הידע בנושאים שלא ענית נכון עליהם.';
+      levelText = '🚀 מתקדם';
+      levelColor = '#29b6f6';
+    } else {
+      icon = '🌟';
+      title = 'מומחה — כל הכבוד!';
+      desc = 'הבנה מרשימה של מסגרת AILit ו-PISA 2029 MAIL! אתה מוכן לשלב את הידע בפרקטיקה.';
+      levelText = '🌟 מומחה';
+      levelColor = '#ff9800';
+    }
+
+    document.getElementById('resultIcon').textContent = icon;
+    document.getElementById('resultTitle').textContent = title;
+    document.getElementById('resultScore').textContent = `${score} / ${questions.length} (${pct}%)`;
+    document.getElementById('resultDesc').textContent = desc;
+
+    const levelEl = document.getElementById('resultLevel');
+    levelEl.textContent = levelText;
+    levelEl.style.cssText = `background:rgba(255,255,255,0.1);color:${levelColor};border:1px solid ${levelColor};padding:8px 28px;border-radius:100px;font-size:1rem;font-weight:700;display:inline-block;`;
+
+    // Breakdown
+    const breakdownEl = document.getElementById('resultBreakdown');
+    if (activeFilter === 'all') {
+      const ailTotal = ALL_QUESTIONS.filter(q => q.source === 'ailit').length;
+      const pisaTotal = ALL_QUESTIONS.filter(q => q.source === 'pisa').length;
+      breakdownEl.innerHTML = `
+        <div class="breakdown-item">
+          <span>📚 AILit</span>
+          <strong>${scoreAILit}/${ailTotal}</strong>
+        </div>
+        <div class="breakdown-item">
+          <span>📊 PISA MAIL</span>
+          <strong>${scorePISA}/${pisaTotal}</strong>
+        </div>
+      `;
+    } else {
+      breakdownEl.innerHTML = '';
+    }
+
+    resultDiv.style.display = 'block';
+  }
+
+  nextBtn.addEventListener('click', () => {
+    current++;
+    if (current < questions.length) {
+      showQuestion(current);
+    } else {
+      showResult();
+    }
   });
 
-  // Allow Enter on flip cards
-  document.querySelectorAll('.flip-card').forEach(card => {
-    card.setAttribute('tabindex', '0');
-    card.setAttribute('role', 'button');
-    card.setAttribute('aria-label', 'לחץ להפוך כרטיס');
-    card.addEventListener('keydown', e => {
-      if (e.key === 'Enter' || e.key === ' ') {
-        e.preventDefault();
-        card.click();
-      }
-    });
-  });
+  document.getElementById('quizRetryBtn').addEventListener('click', resetQuiz);
+
+  showQuestion(0);
 })();
 
 
@@ -609,7 +644,6 @@
   toggle.addEventListener('click', () => isOpen ? closeChat() : openChat());
   closeBtn.addEventListener('click', closeChat);
 
-  // Close on Escape
   document.addEventListener('keydown', e => {
     if (e.key === 'Escape' && isOpen) closeChat();
   });
@@ -622,7 +656,6 @@
     }
   });
 
-  // Auto-resize textarea
   input.addEventListener('input', () => {
     input.style.height = 'auto';
     input.style.height = Math.min(input.scrollHeight, 100) + 'px';
@@ -693,7 +726,7 @@
 
         buffer += decoder.decode(value, { stream: true });
         const lines = buffer.split('\n');
-        buffer = lines.pop(); // keep incomplete last line
+        buffer = lines.pop();
 
         for (const line of lines) {
           if (!line.startsWith('data: ')) continue;
@@ -724,22 +757,35 @@
   }
 })();
 
-// ===== DOMAIN TAB KEYBOARD NAV =====
-(function initTabKeyboard() {
-  const tabs = document.querySelectorAll('.domain-tab');
-  tabs.forEach((tab, i) => {
-    tab.addEventListener('keydown', e => {
-      if (e.key === 'ArrowLeft') {
-        e.preventDefault();
-        const next = tabs[(i + 1) % tabs.length];
-        next.focus();
-        next.click();
-      } else if (e.key === 'ArrowRight') {
-        e.preventDefault();
-        const prev = tabs[(i - 1 + tabs.length) % tabs.length];
-        prev.focus();
-        prev.click();
-      }
-    });
+
+// ===== AGE BAND ANIMATION =====
+(function initAgeBands() {
+  const bands = document.querySelectorAll('.band-bar');
+  if (!bands.length) return;
+
+  const observer = new IntersectionObserver(
+    (entries) => {
+      entries.forEach(entry => {
+        if (entry.isIntersecting) {
+          // Trigger CSS width transition
+          const el = entry.target;
+          const targetWidth = el.style.width;
+          el.style.width = '0%';
+          requestAnimationFrame(() => {
+            requestAnimationFrame(() => {
+              el.style.width = targetWidth;
+            });
+          });
+          observer.unobserve(el);
+        }
+      });
+    },
+    { threshold: 0.5 }
+  );
+
+  bands.forEach(band => {
+    const originalWidth = band.style.width;
+    band.dataset.width = originalWidth;
+    observer.observe(band);
   });
 })();
